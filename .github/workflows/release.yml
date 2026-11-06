@@ -1,0 +1,52 @@
+# Home fork: a tag v<upstream>-h<revision> (v3.1.2-h1) builds the signed universal APK and publishes it
+# as a release. The TVs' built-in updater reads these releases (Updater.RELEASES_URL).
+name: Release
+
+on:
+  push:
+    tags: ['v*-h*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # git describe gives the version
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Android SDK platform
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;37.0.0" > /dev/null
+
+      - name: Keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Unit tests
+        run: ./gradlew :app:testLatestUniversalDebugUnitTest --no-daemon --tests 'com.brouken.player.update.*'
+
+      - name: Build
+        env:
+          RELEASE_STORE_FILE: ${{ runner.temp }}/release.jks
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: ./gradlew assembleLatestUniversalRelease --no-daemon -x lintVitalLatestUniversalRelease
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          apk="app/build/outputs/apk/latestUniversal/release/Syntex.${tag}.apk"
+          ls -la "$apk"
+          gh release create "$tag" "$apk" --title "Syntex ${tag#v}" --notes-file RELEASE_NOTES.md
