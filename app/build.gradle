@@ -18,9 +18,11 @@ try {
 def tagVersionName = gitDescribe ? (gitDescribe.startsWith('v') ? gitDescribe.substring(1) : gitDescribe) : '0.0.0'
 
 def tagVersionCode = 1
-def versionMatcher = (gitDescribe.replaceFirst(/^v/, '') =~ /(\d+)\.(\d+)\.(\d+)/)
+// Home fork: tags are v<upstream>-h<revision> (v3.1.2-h1); the revision is the last two digits of
+// versionCode, so our own fixes on one upstream version still count up. Must match Updater.parseVersionCode.
+def versionMatcher = (gitDescribe.replaceFirst(/^v/, '') =~ /(\d+)\.(\d+)\.(\d+)(?:-h(\d+))?/)
 if (versionMatcher.find()) {
-    tagVersionCode = versionMatcher.group(1).toInteger() * 1000000 + versionMatcher.group(2).toInteger() * 1000 + versionMatcher.group(3).toInteger()
+    tagVersionCode = (versionMatcher.group(1).toInteger() * 1000000 + versionMatcher.group(2).toInteger() * 1000 + versionMatcher.group(3).toInteger()) * 100 + (versionMatcher.group(4) ? versionMatcher.group(4).toInteger() : 0)
 }
 
 // local.properties is not exposed as Gradle project properties (AGP only reads sdk.dir from it),
@@ -45,7 +47,7 @@ android {
 
     defaultConfig {
         def abiFilter = project.findProperty("abiFilter")
-        applicationId "com.syntex.player"
+        applicationId "com.justplus.player"
         minSdkVersion 24
         targetSdkVersion 36
         versionCode tagVersionCode
