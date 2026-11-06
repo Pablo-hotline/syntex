@@ -23,6 +23,20 @@ public class UpdaterTest {
     }
 
     @Test
+    public void homeRevisionCountsAboveItsUpstreamVersion() {
+        assertEquals(300100200, Updater.parseVersionCode("v3.1.2"));
+        assertEquals(300100201, Updater.parseVersionCode("v3.1.2-h1"));
+        assertEquals(300100300, Updater.parseVersionCode("v3.1.3-h0"));
+        assertEquals(true, Updater.parseVersionCode("v3.1.3") > Updater.parseVersionCode("v3.1.2-h9"));
+    }
+
+    @Test
+    public void homeRevisionApkIsFoundByItsFullName() throws Exception {
+        final JSONArray assets = new JSONArray().put(asset("Syntex.v3.1.2-h1.apk"));
+        assertEquals("Syntex.v3.1.2-h1.apk", Updater.releaseApkAsset(assets, "3.1.2-h1").getString("name"));
+    }
+
+    @Test
     public void noMatchingApk_noUpdate() throws Exception {
         final JSONArray assets = new JSONArray().put(asset("Syntex.v3.1.1.apk")).put(asset("other.apk"));
         assertNull(Updater.releaseApkAsset(assets, "3.1.2"));

@@ -54,12 +54,13 @@ public final class Updater {
     private Updater() {}
 
     private static final String RELEASES_URL =
-            "https://api.github.com/repos/SergeiAK/syntex/releases";
+            "https://api.github.com/repos/Pablo-hotline/syntex/releases";
     /** How often a launch may ask; shared by the player and the browser so one launch never asks twice. */
     public static final long CHECK_INTERVAL_MS = 60 * 60 * 1000L;
 
     private static final String APK_FILE_NAME = "update.apk";
-    private static final Pattern VERSION_PATTERN = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)");
+    // Home fork: tags look like v3.1.2-h1 — upstream's version plus our own revision.
+    private static final Pattern VERSION_PATTERN = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)(?:-h(\\d+))?");
 
     private static final OkHttpClient CLIENT = new OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
@@ -153,9 +154,11 @@ public final class Updater {
             return 0;
         }
         try {
-            return Integer.parseInt(matcher.group(1)) * 1_000_000
+            final int base = Integer.parseInt(matcher.group(1)) * 1_000_000
                     + Integer.parseInt(matcher.group(2)) * 1_000
                     + Integer.parseInt(matcher.group(3));
+            final int revision = matcher.group(4) != null ? Integer.parseInt(matcher.group(4)) : 0;
+            return base * 100 + revision;
         } catch (NumberFormatException e) {
             return 0;
         }
